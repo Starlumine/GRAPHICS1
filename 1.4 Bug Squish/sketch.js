@@ -24,6 +24,7 @@ function preload() {
     () => console.error("Error loading skittering sound")
   );
   skitteringSound.setVolume(0.5);
+  skitteringSound.loop(); // Make it loop continuously
 }
 
 function setup() {
@@ -51,6 +52,12 @@ function draw() {
         scuttleSound.stop();
       }
 
+      if (skitteringSound && skitteringSound.isPlaying()) {
+
+        let speedMultiplier = 1 + (30 - time) / 30;
+        skitteringSound.rate(speedMultiplier);
+      }
+
       textAlign(LEFT, TOP);
       text("Score: " + score, textPadding, textPadding);
       textAlign(RIGHT, TOP);
@@ -60,7 +67,8 @@ function draw() {
       if (time <= 0) {
         gameState = GameStates.END;
         scuttleSound.stop();
-        stopBackgroundMusic(); // Stop the background music
+        skitteringSound.stop(); 
+        stopBackgroundMusic(); 
       }
 
       // Spawn new cockroaches to maintain minimum count
@@ -107,10 +115,11 @@ function keyPressed() {
     case GameStates.START:
       if (keyCode === ENTER) {
         gameState = GameStates.PLAY;
-        startBackgroundMusic(); // Start the background music
+        startBackgroundMusic(); 
         console.log("Attempting to play skittering sound...");
         if (skitteringSound && skitteringSound.isLoaded()) {
           skitteringSound.play();
+          skitteringSound.rate(1.0); 
           console.log("Skittering sound started playing");
         } else {
           console.error("Skittering sound not loaded or not available");
@@ -126,7 +135,8 @@ function keyPressed() {
         cockroaches = [];
         splats = [];
         scuttleSound.stop();
-        stopBackgroundMusic(); // Stop the background music
+        skitteringSound.stop();
+        stopBackgroundMusic(); 
         for (let i = 0; i < minCockroachCount; i++) {
           cockroaches.push(new Cockroach(random(width), random(height)));
         }
@@ -138,7 +148,7 @@ function keyPressed() {
 function mousePressed() {
   for (let i = cockroaches.length - 1; i >= 0; i--) {
     if (cockroaches[i].isClicked(mouseX, mouseY)) {
-      splats.push({ x: cockroaches[i].x + 40, y: cockroaches[i].y + 40 }); // Center splat
+      splats.push({ x: cockroaches[i].x + 40, y: cockroaches[i].y + 40 });
       cockroaches.splice(i, 1);
       score++;
       splatSound.play();
@@ -216,58 +226,94 @@ class Cockroach {
   }
 }
 
-// Background music functions
 function startBackgroundMusic() {
+  // Increase the tempo for a more upbeat feel
+  Tone.Transport.bpm.value = 140; // Faster tempo
+
+  // Create a bright pad synth
   padSynth = new Tone.PolySynth(Tone.Synth, {
-    oscillator: { type: "sine" },
+    oscillator: { type: "sawtooth" }, // Brighter sound
     envelope: {
-      attack: 4,
-      decay: 2,
+      attack: 0.1,
+      decay: 0.2,
       sustain: 0.5,
-      release: 6
+      release: 0.5
     }
   }).toDestination();
 
   let padNotes = ["C4", "E4", "G4", "B4"];
   let padIndex = 0;
 
+  // Add a rhythmic pad loop
   new Tone.Loop(time => {
-    padSynth.triggerAttackRelease(padNotes[padIndex % padNotes.length], 6, time);
+    padSynth.triggerAttackRelease(padNotes[padIndex % padNotes.length], "8n", time);
     padIndex++;
-  }, "8s").start(0);
+  }, "2n").start(0);
 
-  arpSynth = new Tone.Synth({
-    oscillator: { type: "triangle" },
+
+  arpPattern = new Tone.Pattern((time, note) => {
+    arpSynth.triggerAttackRelease(note, "16n", time);
+  }, ["C5", "E5", "G5", "B5", "C6", "E6", "G6", "B6"], "upDown");
+
+  arpPattern.interval = "16n";
+  arpPattern.start(0);
+
+  let bassSynth = new Tone.MonoSynth({
+    oscillator: { type: "sawtooth" },
     envelope: {
-      attack: 0.04,
-      decay: 0.2,
-      sustain: 0.1,
-      release: 0.5
+      attack: 0.01,
+      decay: 0.1,
+      sustain: 0.3,
+      release: 0.1
+    },
+    filter: {
+      type: "lowpass",
+      frequency: 200,
+      Q: 1
     }
   }).toDestination();
 
-  arpPattern = new Tone.Pattern((time, note) => {
-    arpSynth.triggerAttackRelease(note, "8n", time);
-  }, ["C5", "E5", "G5", "B5"], "upDown");
+  let bassNotes = ["C2", "G2", "C2", "G2"];
+  let bassIndex = 0;
 
-  arpPattern.interval = "8n";
-  arpPattern.start(0);
+  new Tone.Loop(time => {
+    bassSynth.triggerAttackRelease(bassNotes[bassIndex % bassNotes.length], "8n", time);
+    bassIndex++;
+  }, "1n").start(0);
 
-  noiseSynth = new Tone.NoiseSynth({
-    noise: { type: "brown" },
+  let drumSynth = new Tone.MembraneSynth({
+    pitchDecay: 0.05,
     envelope: {
       attack: 0.01,
-      decay: 0.3,
+      decay: 0.1,
       sustain: 0,
       release: 0.1
     }
   }).toDestination();
 
-  noiseLoop = new Tone.Loop(time => {
-    noiseSynth.triggerAttackRelease("8n", time);
-  }, "4n");
+  let drumPattern = new Tone.Pattern((time, note) => {
+    drumSynth.triggerAttackRelease(note, "8n", time);
+  }, ["C2", null, "C2", null, "C2", null, "C2", null]);
 
-  noiseLoop.start(0);
+  drumPattern.interval = "8n";
+  drumPattern.start(0);
+
+  let hiHatSynth = new Tone.NoiseSynth({
+    noise: { type: "white" },
+    envelope: {
+      attack: 0.01,
+      decay: 0.1,
+      sustain: 0,
+      release: 0.1
+    }
+  }).toDestination();
+
+  let hiHatPattern = new Tone.Pattern((time, note) => {
+    hiHatSynth.triggerAttackRelease("16n", time);
+  }, ["16n", "16n", "16n", "16n"]);
+
+  hiHatPattern.interval = "16n";
+  hiHatPattern.start(0);
 
   Tone.Transport.start();
 }

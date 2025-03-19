@@ -4,23 +4,25 @@ let GameStates = Object.freeze({
   END: "end"
 });
 
-let gameState = GameStates.START;
-let score = 0;
-let highScore = 0;
-let time = 30;
-let textPadding = 15;
-let cockroachSprite;
-let splatSprite;
-let cockroaches = [];
-let splats = [];
-let speedIncrease = 0.2; // Speed boost after each splat
-let spawnInterval = .5; // Seconds between new cockroach spawns
-let lastSpawnTime = 0;
-let minCockroachCount = 8; 
+// Game state variables
+let gameState = GameStates.START, score = 0, highScore = 0, time = 30, textPadding = 15;
+
+// Game assets
+let cockroachSprite, splatSprite, splatSound, scuttleSound;
+
+// Game mechanics
+let cockroaches = [], splats = [], speedIncrease = 0.2, spawnInterval = 0.5, lastSpawnTime = 0, minCockroachCount = 8;
+
+// Background music variables
+let squishSynth, filt, LFOfilt, panner, fmSynth, noise1, noiseEnv, filt1, escapeSynth, missSynth, basicSynth, padSynth, arpSynth, arpPattern, noiseSynth, noiseLoop;
 
 function preload() {
   cockroachSprite = loadImage("media/Cockroach.png");
   splatSprite = loadImage("media/squished.png");
+  splatSound = loadSound("media/splat.mp3");
+  splatSound.setVolume(0.8); // Set volume to 80%
+  scuttleSound = loadSound("media/bug_scuttling.wav");
+  scuttleSound.setVolume(0.1); // Set volume to 10%
 }
 
 function setup() {
@@ -41,6 +43,13 @@ function draw() {
       break;
 
     case GameStates.PLAY:
+      // Handle scuttling sound
+      if (cockroaches.length > 0 && !scuttleSound.isPlaying()) {
+        scuttleSound.loop();
+      } else if (cockroaches.length === 0 && scuttleSound.isPlaying()) {
+        scuttleSound.stop();
+      }
+
       textAlign(LEFT, TOP);
       text("Score: " + score, textPadding, textPadding);
       textAlign(RIGHT, TOP);
@@ -49,6 +58,8 @@ function draw() {
       time -= deltaTime / 1000;
       if (time <= 0) {
         gameState = GameStates.END;
+        scuttleSound.stop();
+        stopBackgroundMusic(); // Stop the background music
       }
 
       // Spawn new cockroaches to maintain minimum count
@@ -95,6 +106,7 @@ function keyPressed() {
     case GameStates.START:
       if (keyCode === ENTER) {
         gameState = GameStates.PLAY;
+        startBackgroundMusic(); // Start the background music
       }
       break;
 
@@ -105,6 +117,8 @@ function keyPressed() {
         time = 30;
         cockroaches = [];
         splats = [];
+        scuttleSound.stop();
+        stopBackgroundMusic(); // Stop the background music
         for (let i = 0; i < minCockroachCount; i++) {
           cockroaches.push(new Cockroach(random(width), random(height)));
         }
@@ -119,6 +133,7 @@ function mousePressed() {
       splats.push({ x: cockroaches[i].x + 40, y: cockroaches[i].y + 40 }); // Center splat
       cockroaches.splice(i, 1);
       score++;
+      splatSound.play();
 
       // Speed up all existing cockroaches
       for (let roach of cockroaches) {
@@ -191,4 +206,70 @@ class Cockroach {
   isClicked(px, py) {
     return px > this.x && px < this.x + 80 && py > this.y && py < this.y + 80;
   }
+}
+
+// Background music functions
+function startBackgroundMusic() {
+  padSynth = new Tone.PolySynth(Tone.Synth, {
+    oscillator: { type: "sine" },
+    envelope: {
+      attack: 4,
+      decay: 2,
+      sustain: 0.5,
+      release: 6
+    }
+  }).toDestination();
+
+  let padNotes = ["C4", "E4", "G4", "B4"];
+  let padIndex = 0;
+
+  new Tone.Loop(time => {
+    padSynth.triggerAttackRelease(padNotes[padIndex % padNotes.length], 6, time);
+    padIndex++;
+  }, "8s").start(0);
+
+  arpSynth = new Tone.Synth({
+    oscillator: { type: "triangle" },
+    envelope: {
+      attack: 0.04,
+      decay: 0.2,
+      sustain: 0.1,
+      release: 0.5
+    }
+  }).toDestination();
+
+  arpPattern = new Tone.Pattern((time, note) => {
+    arpSynth.triggerAttackRelease(note, "8n", time);
+  }, ["C5", "E5", "G5", "B5"], "upDown");
+
+  arpPattern.interval = "8n";
+  arpPattern.start(0);
+
+  noiseSynth = new Tone.NoiseSynth({
+    noise: { type: "brown" },
+    envelope: {
+      attack: 0.01,
+      decay: 0.3,
+      sustain: 0,
+      release: 0.1
+    }
+  }).toDestination();
+
+  noiseLoop = new Tone.Loop(time => {
+    noiseSynth.triggerAttackRelease("8n", time);
+  }, "4n");
+
+  noiseLoop.start(0);
+
+  Tone.Transport.start();
+}
+
+function stopBackgroundMusic() {
+  if (arpPattern && arpPattern.state === "started") {
+    arpPattern.stop();
+  }
+  if (noiseLoop && noiseLoop.state === "started") {
+    noiseLoop.stop();
+  }
+  Tone.Transport.stop();
 }

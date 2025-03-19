@@ -4,25 +4,26 @@ let GameStates = Object.freeze({
   END: "end"
 });
 
-// Game state variables
 let gameState = GameStates.START, score = 0, highScore = 0, time = 30, textPadding = 15;
 
-// Game assets
-let cockroachSprite, splatSprite, splatSound, scuttleSound;
+let cockroachSprite, splatSprite, splatSound, scuttleSound, skitteringSound;
 
-// Game mechanics
 let cockroaches = [], splats = [], speedIncrease = 0.2, spawnInterval = 0.5, lastSpawnTime = 0, minCockroachCount = 8;
 
-// Background music variables
 let squishSynth, filt, LFOfilt, panner, fmSynth, noise1, noiseEnv, filt1, escapeSynth, missSynth, basicSynth, padSynth, arpSynth, arpPattern, noiseSynth, noiseLoop;
 
 function preload() {
   cockroachSprite = loadImage("media/Cockroach.png");
   splatSprite = loadImage("media/squished.png");
   splatSound = loadSound("media/splat.mp3");
-  splatSound.setVolume(0.8); // Set volume to 80%
-  scuttleSound = loadSound("media/bug_scuttling.wav");
-  scuttleSound.setVolume(0.1); // Set volume to 10%
+  splatSound.setVolume(0.8); 
+  scuttleSound = loadSound("media/skittering.mp3");
+  scuttleSound.setVolume(0.1);
+  skitteringSound = loadSound("media/skittering.mp3", 
+    () => console.log("Skittering sound loaded successfully"),
+    () => console.error("Error loading skittering sound")
+  );
+  skitteringSound.setVolume(0.5);
 }
 
 function setup() {
@@ -107,6 +108,13 @@ function keyPressed() {
       if (keyCode === ENTER) {
         gameState = GameStates.PLAY;
         startBackgroundMusic(); // Start the background music
+        console.log("Attempting to play skittering sound...");
+        if (skitteringSound && skitteringSound.isLoaded()) {
+          skitteringSound.play();
+          console.log("Skittering sound started playing");
+        } else {
+          console.error("Skittering sound not loaded or not available");
+        }
       }
       break;
 

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Garden Guardian Documentation</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Garden Guardian Documentation</h1>
+    <p>
+      <strong>Name:</strong> Garden Guardian
+    </p>
+  </header>
+
+  <main>
+    <section>
+      <h2>Description</h2>
+      <p>
+        A game where the player protects nine flower plots from aphids while keeping them hydrated. The Arduino reads joystick movements and button presses, controls LEDs representing each flower’s health, and communicates via WebSerial to a p5.js front-end that renders the scene and plays sound effects with Tone.js.
+      </p>
+    </section>
+
+    <section>
+      <h2>Gameplay Loop</h2>
+      <ol>
+        <li><strong>Start Screen:</strong> Displays title and “Press Button to Start.”</li>
+        <li><strong>Gameplay:</strong> Water flower plots with the Arduino button to keep them healthy while attacking aphids with the button as well. When watering plants there is an animation to show that it is successfully watered. Flower plots have three stages. When it gets to its wilting stage due to not watering it, the flowers will die in a couple seconds. When aphids land on a targeted flower, it takes a couple seconds for the flower to be destroyed.</li>
+        <li><strong>End Screen:</strong> After time expires or the flowers are all destroyed, the end screen displays final stats and high score.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>Arduino (C++)</h2>
+      <ul>
+        <li><strong>Inputs:</strong>
+          <ul>
+            <li>Joystick X/Y → analog pins A0/A1 (player movement)</li>
+            <li>Button → digital pin 3 (water/repel action)</li>
+          </ul>
+        </li>
+        <li><strong>Outputs:</strong>
+          <ul>
+            <li>LEDs on pins 4–12 for each flower’s alive/dead state</li>
+            <li>Tone.js Audio: Plays background loop, watering, and attacking sounds</li>
+          </ul>
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Future Development</h2>
+      <p>
+        For future development, difficulty should be changed so that the experience is easier for people to get into playing. Also should add an instructions page, backgrounds, and new enemy types.
+      </p>
+    </section>
+
+    <section>
+      <h2>Game Demonstration Video</h2>
+      <p><a href="https://youtu.be/KpHjQ2ElEIc" target="_blank">Watch on YouTube</a></p>
+    </section>
+  </main>
+
+  <footer>
+    <p>Jessica Chan</p>
+  </footer>
+</body>
+</html>
